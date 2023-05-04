@@ -86,13 +86,17 @@ def main():
     new_docker_path = input("请输入容器数据卷所在路径：")
 
     # 建立SSH连接
-    ssh = paramiko.SSHClient()
-    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(hostname=hostname, port=port, username=username, password=password)
+    try:
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(hostname=hostname, port=port, username=username, password=password)
+    except Exception as e:
+        print(f"建立SSH连接失败，错误类型：{e}")
+        exit(0)
     # 备份容器数据卷
     if not backup_container_volume(ssh, docker_path):
         ssh.close()
-        return
+        exit(1)
     # 传输备份文件
     if not transfer_backup_file(
         ssh,
@@ -104,7 +108,7 @@ def main():
         docker_path,
     ):
         ssh.close()
-        return
+        exit(2)
     ssh.close()
     # 建立新主机SSH连接
     new_ssh = paramiko.SSHClient()
@@ -119,7 +123,7 @@ def main():
     dir_path, file_name = os.path.split(docker_path)
     if not deploy_new_container(new_ssh, new_docker_path, file_name):
         new_ssh.close()
-        return
+        exit(3)
     new_ssh.close()
     print("转移容器成功！")
 
