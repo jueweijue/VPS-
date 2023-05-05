@@ -31,23 +31,19 @@ def transfer_backup_file(
     """传输备份文件"""
     dir_path, file_name = os.path.split(docker_path)
     try:
-        shell = ssh.invoke_shell()
-        time.sleep(3)
+        print("正在传输...")
         command = f"scp -P {new_port} -r {dir_path}/{file_name}.tar.gz \
             {new_username}@{new_hostname}:{new_docker_path}"
-        shell.sendall(command + "\r\n")
-        time.sleep(1)
-        shell.sendall(new_password + "\r\n")
-        print("正在传输...")
+        stdin, stdout, stderr = ssh.exec_command(command, get_pty=True)
         # 命令执行完成的标志
-        command_finished = False
-        while not command_finished:
-            if shell.recv_ready():
-                output = shell.recv(1024).decode("utf-8")
+        while not stdout.channel.exit_status_ready():
+            if stdout.channel.recv_ready():
+                output = stdout.channel.recv(1024).decode("utf-8")
                 print(output, end="")
-                if "100%" in output:
-                    command_finished = True
-                    shell.close()
+                if "password" in output:
+                    stdin.write(new_password + "\n")
+                    stdin.flush()
+                    print("密码已输入")
     except Exception as e:
         print(f"传输容器数据卷失败，错误类型：{e}")
         return False

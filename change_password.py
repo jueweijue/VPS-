@@ -5,7 +5,7 @@ print("本脚本用于远程修改主机密码")
 # 设置旧主机信息
 hostname = input("请输入主机IP：")
 port = input("请输入端口号(默认22)：") or 22
-username = input("请输入主机用户名：")
+username = input("请输入主机用户名（默认root）：") or "root"
 password = input("请输入主机密码：")
 new_password = input("请输入新密码：")
 
@@ -29,14 +29,11 @@ def connect_host(hostname, port, username, password):
 def change_passwd(ssh, new_password):
     try:
         print("正在修改密码...")
-        shell = ssh.invoke_shell()
-        time.sleep(3)
-        shell.sendall("passwd\r\n")
+        stdin, stdout, stderr = ssh.exec_command("passwd", get_pty=True)
         time.sleep(1)
-        shell.sendall(new_password + "\r\n")
-        time.sleep(1)
-        shell.sendall(new_password + "\r\n")
-        time.sleep(1)
+        stdin.write(new_password + "\n")
+        stdin.write(new_password + "\n")
+        stdin.flush()
     except Exception as e:
         print("修改失败，错误类型：" + str(e))
     finally:
@@ -61,7 +58,6 @@ def main():
         print("连接失败")
         exit(1)
     change_passwd(ssh, new_password)
-    ssh.close()
     check_old_passwd()
 
 
